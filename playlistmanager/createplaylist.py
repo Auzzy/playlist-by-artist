@@ -1,8 +1,8 @@
 import argparse
 import collections
 
-from musicbrainz import AlbumSorter, Filter, MusicBrainz
-from pandora import Pandora
+from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
+from playlistmanager.pandora import Pandora
 
 USER_AGENT = "PandoraPlaylistManager/0.1"
 
@@ -100,7 +100,7 @@ def _match_artists(musicbrainz, artist_name, match_threshhold):
     else:
         return matches[0]
 
-def get_artist_albums_info(musicbrainz, artist_name, match_threshhold, release_filter, album_sorter):
+def get_artist_albums_info(musicbrainz, artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
     artist = _match_artists(musicbrainz, artist_name, match_threshhold)
     albums_info = musicbrainz.get_all_artist_albums(artist["id"],
             filter_=release_filter,
@@ -115,41 +115,10 @@ def get_artist_albums_info(musicbrainz, artist_name, match_threshhold, release_f
     get_album_aliases = lambda album: [alias["name"] for alias in album["aliases"]]
     return [{"artists": get_artist_names(album), "title": album["title"], "aliases": get_album_aliases(album)} for album in albums_info]
 
-def main(artist_name, match_threshhold, release_filter, album_sorter):
+def main(artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
     pandora = Pandora.connect()
 
     albums_info = get_artist_albums_info(musicbrainz, artist_name, match_threshhold, release_filter, album_sorter)
     albums = get_pandora_albums(pandora, albums_info)
     create_playlist(pandora, artist_name, albums)
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("artist", help="Create a playlist of this artist's releases.")
-    parser.add_argument("--match-threshhold", type=int, choices=range(1, 101), metavar="{1..100}", default=85,
-            help="Minimum MusicBrainz score to be considered a match. Default: %(default).")
-
-    parser.add_argument("--sort-field", default="release")
-    parser.add_argument("--sort-order", default=AlbumSorter.SORT_ORDER_ASC)
-    parser.add_argument("--no-sort", action="store_false", dest="sort")
-
-    filter_group = parser.add_argument_group("Filters", "Customize types of releases to be included.")
-    filter_group.add_argument("--include-compilations", action="store_true")
-    filter_group.add_argument("--include-remixes", action="store_true")
-    filter_group.add_argument("--include-live", action="store_true")
-    filter_group.add_argument("--include-soundtracks", action="store_true")
-    filter_group.add_argument("--include-eps", action="store_true")
-    filter_group.add_argument("--include-singles", action="store_true")
-    filter_group.add_argument("--include-all", action="store_true")
-
-    args = vars(parser.parse_args())
-
-    album_filter = Filter.create(**args)
-    album_sorter = AlbumSorter.create(**args) if args["sort"] else AlbumSorter.create(sort_field=None)
-
-    return {**args, "filter": album_filter, "sorter": album_sorter}
-
-if __name__ == "__main__":
-    args = parse_args()
-
-    main(args["artist"], args["match_threshhold"], args["filter"], args["sorter"])
