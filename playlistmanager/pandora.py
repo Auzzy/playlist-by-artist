@@ -6,6 +6,9 @@ ALL_SEARCH_TYPES = ["AL", "AR", "CO", "TR", "SF", "PL", "ST", "PC", "PE"]
 SEARCH_ENDPOINT = "v3/sod/search"
 PLAYLIST_CREATE_ENDPOINT = "v4/playlists/create"
 PLAYLIST_APPEND_ENDPOINT = "v4/playlists/appendItems"
+GET_PLAYLISTS_ENDPOINT = "v6/collections/getSortedPlaylists"
+GET_PLAYLIST_TRACKS_ENDPOINT = "v7/playlists/getTracks"
+EDIT_PLAYLIST_ENDPOINT = "v7/playlists/editTracks"
 ARTIST_DISCOGRAPHY_ENDPOINT = "v4/catalog/getArtistDiscographyWithCollaborations"
 
 RELEASE_TYPES = {
@@ -38,6 +41,31 @@ class Pandora:
     def login(self):
         login_result = self._request("v1/auth/login", {"username": "mathfreak65@gmail.com", "password": os.environ["PANDORAPW"]})
         self.session.headers.update({"X-AuthToken": login_result["authToken"]})
+
+    def get_playlist_tracks_info(self, id, offset=0, limit=100):
+        playlist_version = 0 if offset == 0 else 2
+        return self._request(GET_PLAYLIST_TRACKS_ENDPOINT, {"request": {"pandoraId": id, "playlistVersion": playlist_version, "offset": offset, "limit": limit, "annotationLimit": limit}})
+
+    def get_all_playlists(self):
+        return self._request(GET_PLAYLISTS_ENDPOINT, {"request": {"sortOrder": "ALPHA", "offset": 0, "limit": 100, "annotationLimit": 100}})
+
+    def get_playlist_info(self, id):
+        return self._request(GET_PLAYLIST_TRACKS_ENDPOINT, {"request": {"pandoraId": id, "playlistVersion": 0, "limit": 0}})
+
+    # The move_set should be a list of moves to submit in a single request.
+    # Each move is a list, consisting of the itemId, old index, and new index.
+    # e.g. [[1, 0, 5], [4, 3, 6]]
+    def playlist_edit(self, playlist_info, move_set):
+        moves = [{"itemId": int(move[0]), "oldIndex": int(move[1]), "newIndex": int(move[2])} for move in move_set]
+        self._request(EDIT_PLAYLIST_ENDPOINT, {"request": {"pandoraId": playlist_info["pandoraId"], "playlistVersion": playlist_info["version"], "moves": moves}})
+
+    # The move_list should be a list. Each element is the list of moves to be
+    # made in a single request. Each move is a list, consisting of the itemId,
+    # old index, and new index.
+    # e.g. [[[1, 0, 5], [4, 3, 6]], [[3, 1, 9]]]
+    def playlist_edit_bulk(self, playlist_info, move_list):
+        for move_set in move_list:
+            self.playlist_edit(playlist_info, move_set)
 
     def playlist_append(self, playlist_info, item_ids, *, update_info=False):
         new_playlist_info = self._request(PLAYLIST_APPEND_ENDPOINT, {"pandoraId": playlist_info["pandoraId"], "playlistVersion": playlist_info["version"], "itemPandoraIds": item_ids})
@@ -77,3 +105,39 @@ class Pandora:
 
     def get_albums(self, artist_info, album_names):
         return {album_name: self.get_album(artist_info, album_name) for album_name in album_names}
+
+    def get_playlist_tracks_paginated(self, playlist_info, offset=0, limit=100):
+        tracks = []
+        tracks_info = self.get_playlist_tracks_info(playlist_info["pandoraId"], offset, limit)
+        for track in tracks_info["tracks"]:
+            track_id = track["trackPandoraId"]
+            detail = tracks_info["annotations"][track_id]
+            tracks.append({
+                "track_id": track_id,
+                "item_id": track["itemId"],
+                "name": detail["name"],
+                "artist": detail["artistName"],
+                "album": detail["albumName"]
+            })
+        return tracks
+
+    def get_playlist_tracks(self, playlist_info):
+        tracks = []
+        while True:
+            tracks.extend(self.get_playlist_tracks_paginated(playlist_info, len(tracks)))
+            if len(tracks) >= playlist_info["totalTracks"]:
+                break
+
+        return tracks
+
+    # The new_tracklist_ids should be Pandora itemIds, NOT the trackPandoraId.
+    def rearrange_playlist(self, playlist_info, new_tracklist_ids):
+        current_track_ids = [track["item_id"] for track in self.get_playlist_tracks(playlist_info)]
+        moves = []
+        for new_index, item_id in enumerate(new_tracklist_ids):
+            item_id = int(item_id)
+            old_index = current_track_ids.index(item_id)
+            if new_index != old_index:
+                moves.append([item_id, old_index, new_index])
+
+        self.playlist_edit(playlist_info, moves)
