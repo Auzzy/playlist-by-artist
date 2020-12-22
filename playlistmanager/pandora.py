@@ -6,6 +6,7 @@ ALL_SEARCH_TYPES = ["AL", "AR", "CO", "TR", "SF", "PL", "ST", "PC", "PE"]
 SEARCH_ENDPOINT = "v3/sod/search"
 PLAYLIST_CREATE_ENDPOINT = "v4/playlists/create"
 PLAYLIST_APPEND_ENDPOINT = "v4/playlists/appendItems"
+PLAYLIST_REMOVE_ENDPOINT = "v7/playlists/deleteTracks"
 GET_PLAYLISTS_ENDPOINT = "v6/collections/getSortedPlaylists"
 GET_PLAYLIST_TRACKS_ENDPOINT = "v7/playlists/getTracks"
 EDIT_PLAYLIST_ENDPOINT = "v7/playlists/editTracks"
@@ -51,6 +52,9 @@ class Pandora:
 
     def get_playlist_info(self, id):
         return self._request(GET_PLAYLIST_TRACKS_ENDPOINT, {"request": {"pandoraId": id, "playlistVersion": 0, "limit": 0}})
+
+    def playlist_remove(self, playlist_info, track_ids):
+        return self._request(PLAYLIST_REMOVE_ENDPOINT, {"request": {"pandoraId": playlist_info["pandoraId"], "trackItemIds": track_ids}})
 
     # The move_set should be a list of moves to submit in a single request.
     # Each move is a list, consisting of the itemId, old index, and new index.
@@ -131,13 +135,19 @@ class Pandora:
         return tracks
 
     # The new_tracklist_ids should be Pandora itemIds, NOT the trackPandoraId.
-    def rearrange_playlist(self, playlist_info, new_tracklist_ids):
+    def update_playlist(self, playlist_info, new_tracklist_ids):
         current_track_ids = [track["item_id"] for track in self.get_playlist_tracks(playlist_info)]
+        new_tracklist_ids = [int(id) for id in new_tracklist_ids]
+
         moves = []
         for new_index, item_id in enumerate(new_tracklist_ids):
-            item_id = int(item_id)
             old_index = current_track_ids.index(item_id)
             if new_index != old_index:
                 moves.append([item_id, old_index, new_index])
 
+        deletions = list(set(current_track_ids) - set(new_tracklist_ids))
+
+        # Note the order is important here. Deleting after moving means the
+        # move indices don't need to be adjusted.
         self.playlist_edit(playlist_info, moves)
+        self.playlist_remove(playlist_info, deletions)
