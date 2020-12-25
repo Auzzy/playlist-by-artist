@@ -11,6 +11,7 @@ GET_PLAYLISTS_ENDPOINT = "v6/collections/getSortedPlaylists"
 GET_PLAYLIST_TRACKS_ENDPOINT = "v7/playlists/getTracks"
 EDIT_PLAYLIST_ENDPOINT = "v7/playlists/editTracks"
 ARTIST_DISCOGRAPHY_ENDPOINT = "v4/catalog/getArtistDiscographyWithCollaborations"
+LIBRARY_ADD_ENDPOINT = "v6/collections/addItem"
 
 RELEASE_TYPES = {
     "Deluxe": 0,
@@ -42,6 +43,13 @@ class Pandora:
     def login(self):
         login_result = self._request("v1/auth/login", {"username": "mathfreak65@gmail.com", "password": os.environ["PANDORAPW"]})
         self.session.headers.update({"X-AuthToken": login_result["authToken"]})
+
+    def library_add(self, track_id):
+        return self._request(LIBRARY_ADD_ENDPOINT, {"request": {"pandoraId": track_id}})
+    
+    def library_add_bulk(self, track_ids):
+        for track_id in track_ids:
+            self.library_add(track_id)
 
     def get_playlist_tracks_info(self, id, offset=0, limit=100):
         playlist_version = 0 if offset == 0 else 2
@@ -134,7 +142,7 @@ class Pandora:
 
         return tracks
 
-    # The new_tracklist_ids should be Pandora itemIds, NOT the trackPandoraId.
+    # new_tracklist_ids should be Pandora itemIds, NOT the trackPandoraId.
     def update_playlist(self, playlist_info, new_tracklist_ids):
         current_track_ids = [track["item_id"] for track in self.get_playlist_tracks(playlist_info)]
         new_tracklist_ids = [int(id) for id in new_tracklist_ids]
@@ -151,3 +159,13 @@ class Pandora:
         # move indices don't need to be adjusted.
         self.playlist_edit(playlist_info, moves)
         self.playlist_remove(playlist_info, deletions)
+
+    # track_ids should be Pandora itemIds, NOT the trackPandoraId.
+    def library_add_from_playlist(self, playlist_info, track_ids):
+        track_ids = [int(id) for id in track_ids]
+        to_add = []
+        for playlist_track_info in self.get_playlist_tracks(playlist_info):
+            if playlist_track_info["item_id"] in track_ids:
+                to_add.append(playlist_track_info["track_id"])
+        
+        self.library_add_bulk(to_add)
