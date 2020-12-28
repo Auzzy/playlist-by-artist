@@ -23,7 +23,7 @@ class Pandora:
     BASE_API = f"{BASE}/api"
 
     @staticmethod
-    def connect():
+    def connect(**kwargs):
         session = requests.Session()
 
         # Retrieve CSRF token
@@ -31,17 +31,29 @@ class Pandora:
         session.headers.update({"X-CsrfToken": cookies["csrftoken"]})
 
         pandora = Pandora(session)
-        pandora.login()
+
+        if "auth_token" in kwargs:
+            pandora.session.headers.update({"X-AuthToken": kwargs["auth_token"]})
+        else:
+            pandora.login()
+
         return pandora
 
     def __init__(self, session):
         self.session = session
 
     def _request(self, endpoint, data):
-        return self.session.post(f"{Pandora.BASE_API}/{endpoint}", json=data).json()
+        response = self.session.post(f"{Pandora.BASE_API}/{endpoint}", json=data)
+        response.raise_for_status()
+        return response.json()
 
-    def login(self):
-        login_result = self._request("v1/auth/login", {"username": "mathfreak65@gmail.com", "password": os.environ["PANDORAPW"]})
+    def login(self, username=None, password=None):
+        username = username or os.environ.get("PANDORAUSR")
+        password = password or os.environ.get("PANDORAPW")
+        if not username or not password:
+            raise ValueError("Missing Pandora username and password. Expected as either parameters or environment variables.")
+
+        login_result = self._request("v1/auth/login", {"username": username, "password": password})
         self.session.headers.update({"X-AuthToken": login_result["authToken"]})
 
     def library_add(self, track_id):

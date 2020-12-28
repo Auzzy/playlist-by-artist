@@ -107,9 +107,9 @@ def _prompt_for_artist(matches, artist_name):
 
         print("Invalid choice.")
 
-def discography_playlist(artist_name, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
+def discography_playlist(artist_name, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), pandora_config={}):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
-    pandora = Pandora.connect()
+    pandora = Pandora.connect(**pandora_config)
 
     albums_info = get_artist_albums_info(musicbrainz, artist_id, release_filter, album_sorter)
     albums = get_pandora_albums(pandora, albums_info)
