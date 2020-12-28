@@ -3,6 +3,10 @@ import requests
 import time
 from operator import itemgetter
 
+
+DEFAULT_USER_AGENT = "PandoraPlaylistManager/0.1"
+
+
 class Filter:
     @staticmethod
     def create(**filter_args):
@@ -88,7 +92,7 @@ class MusicBrainz:
     BASE_API = "https://musicbrainz.org/ws/2"
 
     @staticmethod
-    def connect(user_agent):
+    def connect(user_agent=DEFAULT_USER_AGENT):
         session = requests.Session()
         session.headers.update({
             "User-Agent": user_agent,
@@ -102,9 +106,10 @@ class MusicBrainz:
     def _request(self, endpoint, params={}):
         return self.session.get(f"{MusicBrainz.BASE_API}/{endpoint}", params={**params, "fmt": "json"}).json()
 
-    def search_artist(self, name):
+    def search_artist(self, name, threshhold=0):
         search_name = name.replace(" ", "+")
-        return self._request("artist", {"query": search_name})
+        result = self._request("artist", {"query": search_name})
+        return [artist for artist in result["artists"] if artist["score"] >= threshhold]
 
     def browse(self, endpoint, params, *, limit=20, offset=0, inc=None):
         return self._request(endpoint, {"limit": limit, "offset": offset, "inc": inc, **params})

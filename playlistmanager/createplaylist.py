@@ -21,8 +21,10 @@ def create_playlist(pandora, artist_name, albums_by_name, name_format="{artist} 
 
             album_ids.append(album["pandoraId"])
 
-    playlist_info = pandora.playlist_create(name_format.format(artist=artist_name))
+    playlist_name = name_format.format(artist=artist_name)
+    playlist_info = pandora.playlist_create(playlist_name)
     pandora.playlist_append(playlist_info, album_ids, update_info=True)
+    return playlist_name
 
 def get_pandora_albums(pandora, albums_info):
     albums_by_artists = collections.defaultdict(set)
@@ -71,6 +73,20 @@ def get_pandora_albums(pandora, albums_info):
 
     return final_albums
 
+def get_artist_albums_info(musicbrainz, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
+    albums_info = musicbrainz.get_all_artist_albums(artist_id,
+            filter_=release_filter,
+            sorter=album_sorter)
+
+    # The name an artist uses for a release may be an alias. Since Pandora
+    # treats different names as separate artists (usually), the name on the
+    # release needs to be used for searching. That's also why we use
+    # "artist-credit.*.name" instead of "artist-credit.*.artist.name"
+    # Keeping it a list retains the order returned by get_all_artist_albums().
+    get_artist_names = lambda album: [artist["name"] for artist in album["artist-credit"]]
+    get_album_aliases = lambda album: [alias["name"] for alias in album["aliases"]]
+    return [{"artists": get_artist_names(album), "title": album["title"], "aliases": get_album_aliases(album)} for album in albums_info]
+
 def _prompt_for_artist(matches, artist_name):
     print(f"MusicBrainz found multiple artists matching \"{artist_name}\". Please select one:")
     while True:
@@ -91,34 +107,18 @@ def _prompt_for_artist(matches, artist_name):
 
         print("Invalid choice.")
 
-def _match_artists(musicbrainz, artist_name, match_threshhold):
-    search_result = musicbrainz.search_artist(artist_name)
-
-    matches = [artist for artist in search_result["artists"] if artist["score"] >= match_threshhold]
-    if len(matches) > 1:
-        return _prompt_for_artist(matches, artist_name)
-    else:
-        return matches[0]
-
-def get_artist_albums_info(musicbrainz, artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
-    artist = _match_artists(musicbrainz, artist_name, match_threshhold)
-    albums_info = musicbrainz.get_all_artist_albums(artist["id"],
-            filter_=release_filter,
-            sorter=album_sorter)
-
-    # The name an artists uses for a release may be an alias. Since Pandora
-    # treats different names as separate arists (usually), the name on the
-    # release needs to be used for searching. That's also why we use
-    # "artist-credit.*.name" instead of "artist-credit.*.artist.name"
-    # Keeping it a list retains the order returned by get_all_artist_albums().
-    get_artist_names = lambda album: [artist["name"] for artist in album["artist-credit"]]
-    get_album_aliases = lambda album: [alias["name"] for alias in album["aliases"]]
-    return [{"artists": get_artist_names(album), "title": album["title"], "aliases": get_album_aliases(album)} for album in albums_info]
-
-def main(artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
+def discography_playlist(artist_name, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
     pandora = Pandora.connect()
 
-    albums_info = get_artist_albums_info(musicbrainz, artist_name, match_threshhold, release_filter, album_sorter)
+    albums_info = get_artist_albums_info(musicbrainz, artist_id, release_filter, album_sorter)
     albums = get_pandora_albums(pandora, albums_info)
-    create_playlist(pandora, artist_name, albums)
+    return create_playlist(pandora, artist_name, albums)
+
+def discography_playlist_cli(artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
+    musicbrainz = MusicBrainz.connect(USER_AGENT)
+
+    search_result = musicbrainz.search_artist(artist_name, match_threshhold)
+    artist = _prompt_for_artist(search_result, artist_name) if len(search_result) > 1 else search_result[0]
+
+    return discorgaphy_playlist(artist_name, artist["id"], release_filter, album_sorter)
