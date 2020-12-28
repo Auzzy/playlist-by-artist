@@ -32,4 +32,4 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    createplaylist.main(args["artist"], args["match_threshhold"], args["filter"], args["sorter"])
+    createplaylist.discography_playlist_cli(args["artist"], args["match_threshhold"], args["filter"], args["sorter"])
