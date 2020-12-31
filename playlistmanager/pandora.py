@@ -19,7 +19,7 @@ RELEASE_TYPES = {
 }
 
 class Pandora:
-    BASE = "https://www.pandora.com/"
+    BASE = "https://www.pandora.com"
     BASE_API = f"{BASE}/api"
 
     @staticmethod

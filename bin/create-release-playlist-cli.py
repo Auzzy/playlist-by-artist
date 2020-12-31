@@ -6,8 +6,10 @@ from playlistmanager.musicbrainz import AlbumSorter, Filter
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("artist", help="Create a playlist of this artist's releases.")
+    parser.add_argument("--auth-token")
+
     parser.add_argument("--match-threshhold", type=int, choices=range(1, 101), metavar="{1..100}", default=85,
-            help="Minimum MusicBrainz score to be considered a match. Default: %(default).")
+            help="Minimum MusicBrainz score to be considered a match. Default: %(default)s.")
 
     parser.add_argument("--sort-field", default="release")
     parser.add_argument("--sort-order", default=AlbumSorter.SORT_ORDER_ASC)
@@ -32,4 +34,5 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    createplaylist.discography_playlist_cli(args["artist"], args["match_threshhold"], args["filter"], args["sorter"])
+    createplaylist.discography_playlist_cli(
+        args["artist"], args["match_threshhold"], args["filter"], args["sorter"], token=args["auth_token"])
