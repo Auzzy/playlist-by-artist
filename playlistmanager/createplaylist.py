@@ -39,6 +39,9 @@ def get_pandora_albums(pandora, albums_info):
     artist_cache = {}
     for artist_name, album_names in albums_by_artists.items():
         if artist_name not in artist_cache:
+            # Add entry to the cache to cover no results for the search.
+            artist_cache[artist_name] = {}
+
             artist_results = pandora.search_artist(artist_name, 3)
 
             # There's no surefire way to link from MusicBrainz to Pandora.
@@ -115,10 +118,14 @@ def discography_playlist(artist_name, artist_id, release_filter=Filter.create(),
     albums = get_pandora_albums(pandora, albums_info)
     return create_playlist(pandora, artist_name, albums)
 
-def discography_playlist_cli(artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
+def discography_playlist_cli(artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), token=None):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
 
     search_result = musicbrainz.search_artist(artist_name, match_threshhold)
     artist = _prompt_for_artist(search_result, artist_name) if len(search_result) > 1 else search_result[0]
 
-    return discorgaphy_playlist(artist_name, artist["id"], release_filter, album_sorter)
+    pandora_config = {}
+    if token:
+        pandora_config["auth_token"] = token
+
+    return discography_playlist(artist_name, artist["id"], release_filter, album_sorter, pandora_config)
