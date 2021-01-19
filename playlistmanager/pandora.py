@@ -12,6 +12,7 @@ GET_PLAYLIST_TRACKS_ENDPOINT = "v7/playlists/getTracks"
 EDIT_PLAYLIST_ENDPOINT = "v7/playlists/editTracks"
 ARTIST_DISCOGRAPHY_ENDPOINT = "v4/catalog/getArtistDiscographyWithCollaborations"
 LIBRARY_ADD_ENDPOINT = "v6/collections/addItem"
+LIBRARY_GET_ENDPOINT = "v6/collections/getItems"
 
 RELEASE_TYPES = {
     "Deluxe": 0,
@@ -62,6 +63,9 @@ class Pandora:
     def library_add_bulk(self, track_ids):
         for track_id in track_ids:
             self.library_add(track_id)
+
+    def library_get_items(self, limit=10000, *, cursor=None):
+        return self._request(LIBRARY_GET_ENDPOINT, {"request": {"limit": limit, "cursor": cursor}})
 
     def get_playlist_tracks_info(self, playlist_info, offset=0, limit=100):
         playlist_version = 0 if offset == 0 else playlist_info["version"]
@@ -181,3 +185,20 @@ class Pandora:
                 to_add.append(playlist_track_info["track_id"])
         
         self.library_add_bulk(to_add)
+
+    def library_get_all(self):
+        collection = []
+
+        cursor = None
+        while True:
+            library = self.library_get_items(10000, cursor=cursor)
+            collection.extend(library["items"])
+            cursor = library.get("cursor")
+            if not cursor:
+                break
+
+        return collection
+
+    def library_get_all_track_ids(self):
+        collection = self.library_get_all()
+        return {item["pandoraId"] for item in collection if item["pandoraType"] == "TR"}
