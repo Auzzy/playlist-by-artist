@@ -4,6 +4,7 @@ import requests
 
 ALL_SEARCH_TYPES = ["AL", "AR", "CO", "TR", "SF", "PL", "ST", "PC", "PE"]
 SEARCH_ENDPOINT = "v3/sod/search"
+GET_DETAILS_ENDPOINT = "v4/catalog/getDetails"
 PLAYLIST_CREATE_ENDPOINT = "v4/playlists/create"
 PLAYLIST_APPEND_ENDPOINT = "v4/playlists/appendItems"
 PLAYLIST_REMOVE_ENDPOINT = "v7/playlists/deleteTracks"
@@ -117,6 +118,9 @@ class Pandora:
     def get_artist_discography(self, artist_id, *, annotation_limit=0):
         return self._request(ARTIST_DISCOGRAPHY_ENDPOINT, {"artistPandoraId": artist_id, "annotationLimit": annotation_limit})
 
+    def get_details(self, pandora_id):
+        return self._request(GET_DETAILS_ENDPOINT, {"pandoraId": pandora_id})
+
     ### Higher-level operations
     def get_album(self, artist_info, album_name):
         artist_discography_info = self.get_artist_discography(artist_info["pandoraId"])
@@ -137,6 +141,7 @@ class Pandora:
     def get_playlist_tracks_paginated(self, playlist_info, offset=0, limit=100):
         tracks = []
         tracks_info = self.get_playlist_tracks_info(playlist_info, offset, limit)
+        library_contains = self.library_contains_tracks(tracks_info["annotations"].values())
         for track in tracks_info["tracks"]:
             track_id = track["trackPandoraId"]
             detail = tracks_info["annotations"][track_id]
@@ -145,7 +150,8 @@ class Pandora:
                 "item_id": track["itemId"],
                 "name": detail["name"],
                 "artist": detail["artistName"],
-                "album": detail["albumName"]
+                "album": detail["albumName"],
+                "in_library": library_contains.get(track_id, False)
             })
         return tracks
 
@@ -197,8 +203,19 @@ class Pandora:
             if not cursor:
                 break
 
-        return collection
+        return {item["pandoraId"]: item for item in collection}
 
     def library_get_all_track_ids(self):
         collection = self.library_get_all()
-        return {item["pandoraId"] for item in collection if item["pandoraType"] == "TR"}
+        tracks = set()
+        for item in collection:
+            if item["pandoraType"] == "TR":
+                tracks.add(item["pandoraId"])
+            elif item["pandoraType"] == "AL":
+                album_details = self.get_details(item["pandoraId"])
+                tracks.update({info["pandoraId"] for info in album_details["annotations"].values() if info["type"] == "TR"})
+        return tracks
+
+    def library_contains_tracks(self, track_annotations):
+        library = self.library_get_all()
+        return {track["pandoraId"]: track["pandoraId"] in library or track.get("albumId") in library for track in track_annotations}
