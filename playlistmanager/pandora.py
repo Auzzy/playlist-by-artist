@@ -63,9 +63,9 @@ class Pandora:
         for track_id in track_ids:
             self.library_add(track_id)
 
-    def get_playlist_tracks_info(self, id, offset=0, limit=100):
-        playlist_version = 0 if offset == 0 else 2
-        return self._request(GET_PLAYLIST_TRACKS_ENDPOINT, {"request": {"pandoraId": id, "playlistVersion": playlist_version, "offset": offset, "limit": limit, "annotationLimit": limit}})
+    def get_playlist_tracks_info(self, playlist_info, offset=0, limit=100):
+        playlist_version = 0 if offset == 0 else playlist_info["version"]
+        return self._request(GET_PLAYLIST_TRACKS_ENDPOINT, {"request": {"pandoraId": playlist_info["pandoraId"], "playlistVersion": playlist_version, "offset": offset, "limit": limit, "annotationLimit": limit}})
 
     def get_all_playlists(self):
         return self._request(GET_PLAYLISTS_ENDPOINT, {"request": {"sortOrder": "ALPHA", "offset": 0, "limit": 100, "annotationLimit": 100}})
@@ -132,7 +132,7 @@ class Pandora:
 
     def get_playlist_tracks_paginated(self, playlist_info, offset=0, limit=100):
         tracks = []
-        tracks_info = self.get_playlist_tracks_info(playlist_info["pandoraId"], offset, limit)
+        tracks_info = self.get_playlist_tracks_info(playlist_info, offset, limit)
         for track in tracks_info["tracks"]:
             track_id = track["trackPandoraId"]
             detail = tracks_info["annotations"][track_id]
