@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import requests
@@ -14,6 +15,19 @@ EDIT_PLAYLIST_ENDPOINT = "v7/playlists/editTracks"
 ARTIST_DISCOGRAPHY_ENDPOINT = "v4/catalog/getArtistDiscographyWithCollaborations"
 LIBRARY_ADD_ENDPOINT = "v6/collections/addItem"
 LIBRARY_GET_ENDPOINT = "v6/collections/getItems"
+GRAPH_API_ENDPOINT = "v1/graphql/graphql"
+
+GRAPH_API_SIMILAR_ARTISTS_QUERY = """query GetSimilarArtists($pandoraId: String!) {
+   entity(id: $pandoraId) {
+     ...SimilarArtistsFragment   }
+ }
+  fragment ArtistFragment on Artist {
+   pandoraId: id   type   name   sortableName
+ }
+  fragment SimilarArtistsFragment on Artist {
+   similarArtists {
+     ...ArtistFragment   }
+ }"""
 
 RELEASE_TYPES = {
     "Deluxe": 0,
@@ -53,6 +67,9 @@ class Pandora:
         response = self.session.post(f"{Pandora.BASE_API}/{endpoint}", json=data)
         response.raise_for_status()
         return response.json()
+
+    def _graphql(self, query, **variables):
+        return self._request(GRAPH_API_ENDPOINT, {"query": query, "variables": json.dumps(variables)})
 
     def login(self, username=None, password=None):
         username = username or os.environ.get("PANDORAUSR")
@@ -132,6 +149,9 @@ class Pandora:
 
     def get_details(self, pandora_id):
         return self._request(GET_DETAILS_ENDPOINT, {"pandoraId": pandora_id})
+
+    def get_similar_artists(self, artist_id):
+        return self._graphql(GRAPH_API_SIMILAR_ARTISTS_QUERY, pandoraId=artist_id)["data"]["entity"]["similarArtists"]
 
     ### Higher-level operations
     def get_album(self, artist_info, album_name):
