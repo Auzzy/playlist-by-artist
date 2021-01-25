@@ -1,6 +1,6 @@
 import argparse
 
-from playlistmanager import createplaylist
+from playlistmanager.discography_playlist import discography_playlist_cli
 from playlistmanager.musicbrainz import AlbumSorter, Filter
 
 def parse_args():
@@ -34,5 +34,5 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    createplaylist.discography_playlist_cli(
+    discography_playlist_cli(
         args["artist"], args["match_threshhold"], args["filter"], args["sorter"], token=args["auth_token"])

@@ -4,10 +4,14 @@ import collections
 from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
 from playlistmanager.pandora import Pandora
 
-USER_AGENT = "PandoraPlaylistManager/0.1"
 
+def create_playlist(pandora, artist_name, album_ids, name_format="{artist} Discography"):
+    playlist_name = name_format.format(artist=artist_name)
+    playlist_info = pandora.playlist_create(playlist_name)
+    print(pandora.playlist_append(playlist_info, album_ids, update_info=True))
+    return playlist_name
 
-def create_playlist(pandora, artist_name, albums_by_name, name_format="{artist} Discography"):
+def process_albums(albums_by_name, artist_name):
     album_ids = []
     for name, albums in albums_by_name.items():
         if not albums:
@@ -21,10 +25,7 @@ def create_playlist(pandora, artist_name, albums_by_name, name_format="{artist} 
 
             album_ids.append(album["pandoraId"])
 
-    playlist_name = name_format.format(artist=artist_name)
-    playlist_info = pandora.playlist_create(playlist_name)
-    pandora.playlist_append(playlist_info, album_ids, update_info=True)
-    return playlist_name
+    return album_ids
 
 def get_pandora_albums(pandora, albums_info):
     albums_by_artists = collections.defaultdict(set)
@@ -99,7 +100,7 @@ def _prompt_for_artist(matches, artist_name):
             if disambig:
                 match_str += f" ({disambig})"
             print(match_str)
-        
+
         try:
             choice = int(input(f"Please select an artist [1-{len(matches)}]: "))
         except ValueError:
@@ -116,7 +117,8 @@ def discography_playlist(artist_name, artist_id, release_filter=Filter.create(),
 
     albums_info = get_artist_albums_info(musicbrainz, artist_id, release_filter, album_sorter)
     albums = get_pandora_albums(pandora, albums_info)
-    return create_playlist(pandora, artist_name, albums)
+    album_ids = process_albums(albums, artist_name)
+    return create_playlist(pandora, artist_name, album_ids)
 
 def discography_playlist_cli(artist_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), token=None):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
