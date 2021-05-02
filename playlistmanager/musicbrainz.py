@@ -4,7 +4,7 @@ import time
 from operator import itemgetter
 
 
-DEFAULT_USER_AGENT = "PandoraPlaylistManager/0.1"
+DEFAULT_USER_AGENT = "PandoraPlaylistManager/0.1 (github.com/Auzzy/playlist-manager)"
 
 
 class Filter:
@@ -104,7 +104,13 @@ class MusicBrainz:
         self.session = session
 
     def _request(self, endpoint, params={}):
-        return self.session.get(f"{MusicBrainz.BASE_API}/{endpoint}", params={**params, "fmt": "json"}).json()
+        while True:
+            response = self.session.get(f"{MusicBrainz.BASE_API}/{endpoint}", params={**params, "fmt": "json"})
+            if response.status_code != 503:
+                break
+
+            time.sleep(1)
+        return response.json()
 
     def search_artist(self, name, threshhold=0):
         search_name = name.replace(" ", "+")
