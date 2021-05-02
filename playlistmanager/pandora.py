@@ -20,6 +20,11 @@ RELEASE_TYPES = {
     "OriginalAlbum": 1
 }
 
+# Unclear what the track limit is, but it's between 600 and 878. The request
+# target will be around 500 to give some leeway. If you assume 12 tracks per
+# album, that's 41 or 42 albums, then round down to play it safe.
+MAX_ALBUMS_PER_REQUEST = 40
+
 class Pandora:
     BASE = "https://www.pandora.com"
     BASE_API = f"{BASE}/api"
@@ -97,7 +102,14 @@ class Pandora:
             self.playlist_edit(playlist_info, move_set)
 
     def playlist_append(self, playlist_info, item_ids, *, update_info=False):
-        new_playlist_info = self._request(PLAYLIST_APPEND_ENDPOINT, {"pandoraId": playlist_info["pandoraId"], "playlistVersion": playlist_info["version"], "itemPandoraIds": item_ids})
+        # TODO: segment item_ids into albums and tracks, and chop up the
+        # requests accordingly.
+        remaining_item_ids = item_ids[:]
+        new_playlist_info = playlist_info.copy()
+        while len(remaining_item_ids) > MAX_ALBUMS_PER_REQUEST:
+            new_playlist_info = self._request(PLAYLIST_APPEND_ENDPOINT, {"pandoraId": new_playlist_info["pandoraId"], "playlistVersion": new_playlist_info["version"], "itemPandoraIds": remaining_item_ids[:MAX_ALBUMS_PER_REQUEST]})
+            remaining_item_ids = remaining_item_ids[MAX_ALBUMS_PER_REQUEST:]
+            time.sleep(5)
         if update_info:
             # Update playlist info with new response
             playlist_info.update({key: val for key, val in new_playlist_info.items() if key in playlist_info})
