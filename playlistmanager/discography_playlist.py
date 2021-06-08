@@ -4,6 +4,7 @@ import collections
 from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
 from playlistmanager.pandora import Pandora
 
+USER_AGENT = "PandoraPlaylistManager/0.1"
 
 def create_playlist(pandora, artist_name, album_ids, name_format="{artist} Discography"):
     playlist_name = name_format.format(artist=artist_name)

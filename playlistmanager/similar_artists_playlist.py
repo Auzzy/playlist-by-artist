@@ -2,6 +2,8 @@ from playlistmanager import discography_playlist
 from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
 from playlistmanager.pandora import Pandora
 
+USER_AGENT = "PandoraPlaylistManager/0.1"
+
 
 def _disambiguate_source_artist(similar_artist_choices):
     return [{**info, "disambiguation": ", ".join(similar["name"] for similar in info["similar"])} for info in similar_artist_choices]
