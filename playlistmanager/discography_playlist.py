@@ -9,7 +9,7 @@ USER_AGENT = "PandoraPlaylistManager/0.1"
 def create_playlist(pandora, artist_name, album_ids, name_format="{artist} Discography"):
     playlist_name = name_format.format(artist=artist_name)
     playlist_info = pandora.playlist_create(playlist_name)
-    print(pandora.playlist_append(playlist_info, album_ids, update_info=True))
+    pandora.playlist_append(playlist_info, album_ids, update_info=True)
     return playlist_name
 
 def process_albums(albums_by_name, artist_name):

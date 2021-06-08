@@ -2,6 +2,7 @@ import json
 import math
 import os
 import requests
+import time
 
 ALL_SEARCH_TYPES = ["AL", "AR", "CO", "TR", "SF", "PL", "ST", "PC", "PE"]
 SEARCH_ENDPOINT = "v3/sod/search"
@@ -123,7 +124,7 @@ class Pandora:
         # requests accordingly.
         remaining_item_ids = item_ids[:]
         new_playlist_info = playlist_info.copy()
-        while len(remaining_item_ids) > MAX_ALBUMS_PER_REQUEST:
+        while remaining_item_ids:
             new_playlist_info = self._request(PLAYLIST_APPEND_ENDPOINT, {"pandoraId": new_playlist_info["pandoraId"], "playlistVersion": new_playlist_info["version"], "itemPandoraIds": remaining_item_ids[:MAX_ALBUMS_PER_REQUEST]})
             remaining_item_ids = remaining_item_ids[MAX_ALBUMS_PER_REQUEST:]
             time.sleep(5)
