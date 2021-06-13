@@ -184,6 +184,7 @@ class Pandora:
                 "name": detail["name"],
                 "artist": detail["artistName"],
                 "album": detail["albumName"],
+                "duration": detail["duration"],
                 "in_library": library_contains.get(track_id, False)
             })
         return tracks
