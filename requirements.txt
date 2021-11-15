@@ -1,2 +1,5 @@
 requests
 Unidecode
+ytmusicapi
+requests
+bs4

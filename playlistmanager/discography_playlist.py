@@ -2,7 +2,7 @@ import argparse
 import collections
 
 from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
-from playlistmanager.services import pandora
+from playlistmanager.services import get_service
 
 USER_AGENT = "PlaylistManager/0.1"
 
@@ -26,20 +26,20 @@ def _prompt_for_artist(matches, search_name):
 
         print("Invalid choice.")
 
-def discography_playlist(search_name, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), client_config={}):
+def discography_playlist(service_name, search_name, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), client_config={}):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
 
+    artist_links = musicbrainz.get_artist_links(artist_id)
     albums_info = musicbrainz.get_artist_albums_info(artist_id, release_filter, album_sorter)
-    return pandora.create_discography_playlist(albums_info, search_name, client_config)
 
-def discography_playlist_cli(search_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), auth=None):
+    return get_service(service_name).create_discography_playlist(albums_info, artist_links, search_name, client_config)
+
+def discography_playlist_cli(service_name, search_name, match_threshhold, release_filter=Filter.create(), album_sorter=AlbumSorter.create(), auth=None):
     musicbrainz = MusicBrainz.connect(USER_AGENT)
 
     search_result = musicbrainz.search_artist(search_name, match_threshhold)
     artist = _prompt_for_artist(search_result, search_name) if len(search_result) > 1 else search_result[0]
 
-    client_config = {}
-    if auth:
-        client_config["auth_token"] = auth
+    client_config = get_service(service_name).auth_to_config(auth)
 
-    return discography_playlist(search_name, artist["id"], release_filter, album_sorter, client_config)
+    return discography_playlist(service_name, search_name, artist["id"], release_filter, album_sorter, client_config)

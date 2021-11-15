@@ -1,9 +1,13 @@
 import collections
+import itertools
 
 from playlistmanager.services.pandora.client import Pandora
 
 NAMES = ("pandora", )
 
+
+def auth_to_config(token):
+    return {"auth_token": token} if token else {}
 
 def create_client(client_config):
     return Pandora.connect(**client_config)
@@ -89,7 +93,8 @@ def _get_album_ids(albums_info, client_config={}, *, client=None):
     return _process_albums(albums)
 
 def get_similar_artists(artist_id, client_config):
-    return create_client(client_config).get_similar_artists(artist_id)
+    similar_artists = create_client(client_config).get_similar_artists(artist_id)
+    return [artist["name"] for artist in similar_artists]
 
 def search_artists(search_name, client_config):
     pandora = create_client(client_config)
@@ -102,14 +107,15 @@ def search_artists(search_name, client_config):
         choices.append({"id": artist_id, "name": artist_info[artist_id]["name"], "similar": similar_info})
     return choices
 
-def create_discography_playlist(albums_info, search_name, client_config, name_format="{artist} Discography"):
+def create_discography_playlist(albums_info, artist_links, search_name, client_config, name_format="{artist} Discography"):
     pandora = create_client(client_config)
 
     album_ids = _get_album_ids(albums_info, client=pandora)
     return _create_pandora_playlist(search_name, album_ids, name_format, client=pandora)
 
-def create_similar_artists_playlist(albums_info, search_name, client_config, name_format="{artist} Similar Artists"):
+def create_similar_artists_playlist(albums_info_by_artist, search_name, client_config, name_format="{artist} Similar Artists"):
     pandora = create_client(client_config)
 
+    albums_info = list(itertools.chain.from_iterable(info["albums"] for info in albums_info_by_artist.values()))
     album_ids = _get_album_ids(albums_info, client=pandora)
     return _create_pandora_playlist(search_name, album_ids, name_format, client=pandora)
