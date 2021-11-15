@@ -117,6 +117,11 @@ class MusicBrainz:
         result = self._request("artist", {"query": search_name})
         return [artist for artist in result["artists"] if artist["score"] >= threshhold]
 
+    def lookup(self, resource, id, *, inc=None):
+        params = {"inc": inc} if inc else {}
+        return self._request(f"{resource}/{id}", params)
+
+
     def browse(self, endpoint, params, *, limit=20, offset=0, inc=None):
         return self._request(endpoint, {"limit": limit, "offset": offset, "inc": inc, **params})
 
@@ -132,6 +137,9 @@ class MusicBrainz:
             **kwargs)
 
     ### Higher-level operations
+
+    def get_artist(self, artist_id):
+        return self.lookup("artist", artist_id)
 
     def get_all_artist_albums(self, artist_id, *, filter_=Filter.create(), sorter=AlbumSorter.create()):
         all_albums = []
@@ -166,3 +174,9 @@ class MusicBrainz:
         get_album_aliases = lambda album: [alias["name"] for alias in album["aliases"]]
         return [{"artists": get_artist_names(album), "title": album["title"], "aliases": get_album_aliases(album)} for album in albums_info]
 
+    def get_artist_links(self, id):
+        relations = self.lookup("artist", id, inc="url-rels")["relations"]
+        relations_by_type = collections.defaultdict(list)
+        for relation in relations:
+            relations_by_type[relation["type"]].append(relation["url"]["resource"])
+        return dict(relations_by_type)
