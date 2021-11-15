@@ -4,7 +4,7 @@ import time
 from operator import itemgetter
 
 
-DEFAULT_USER_AGENT = "PandoraPlaylistManager/0.1 (github.com/Auzzy/playlist-manager)"
+DEFAULT_USER_AGENT = "PlaylistManager/0.1 (github.com/Auzzy/playlist-manager)"
 
 
 class Filter:
@@ -153,4 +153,16 @@ class MusicBrainz:
         all_albums = filter_.post_request_filter(all_albums)
         all_albums = sorter.sort(all_albums)
         return all_albums
+
+    def get_artist_albums_info(self, artist_id, release_filter=Filter.create(), album_sorter=AlbumSorter.create()):
+        albums_info = self.get_all_artist_albums(artist_id, filter_=release_filter, sorter=album_sorter)
+
+        # The name an artist uses for a release may be an alias. Since Pandora
+        # treats different names as separate artists (usually), the name on the
+        # release needs to be used for searching. That's also why we use
+        # "artist-credit.*.name" instead of "artist-credit.*.artist.name"
+        # Keeping it a list retains the order returned by get_all_artist_albums().
+        get_artist_names = lambda album: [artist["name"] for artist in album["artist-credit"]]
+        get_album_aliases = lambda album: [alias["name"] for alias in album["aliases"]]
+        return [{"artists": get_artist_names(album), "title": album["title"], "aliases": get_album_aliases(album)} for album in albums_info]
 

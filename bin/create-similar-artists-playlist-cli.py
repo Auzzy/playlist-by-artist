@@ -6,7 +6,7 @@ from playlistmanager.similar_artists_playlist import similar_artists_playlist_cl
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("artist", help="Create a playlist of this artist's releases.")
-    parser.add_argument("--auth-token")
+    parser.add_argument("--auth")
 
     parser.add_argument("--match-threshhold", type=int, choices=range(1, 101), metavar="{1..100}", default=85,
             help="Minimum MusicBrainz score to be considered a match. Default: %(default)s.")
@@ -35,4 +35,4 @@ if __name__ == "__main__":
     args = parse_args()
 
     similar_artists_playlist_cli(
-        args["artist"], args["match_threshhold"], args["filter"], args["sorter"], token=args["auth_token"])
+        args["artist"], args["match_threshhold"], args["filter"], args["sorter"], auth=args["auth"])
