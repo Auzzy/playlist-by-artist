@@ -3,8 +3,8 @@ import itertools
 
 from playlistmanager.services.pandora.client import Pandora
 
+DISPLAY_NAME = "Pandora"
 NAMES = ("pandora", )
-
 
 def auth_to_config(token):
     return {"auth_token": token} if token else {}
@@ -119,3 +119,44 @@ def create_similar_artists_playlist(albums_info_by_artist, search_name, client_c
     albums_info = list(itertools.chain.from_iterable(info["albums"] for info in albums_info_by_artist.values()))
     album_ids = _get_album_ids(albums_info, client=pandora)
     return _create_pandora_playlist(search_name, album_ids, name_format, client=pandora)
+
+
+##### web app operations #####
+def update_playlist(playlist_id, item_ids, client_config):
+    pandora = create_client(client_config)
+
+    playlist_info = pandora.get_playlist_info(playlist_id)
+    pandora.update_playlist(playlist_info, item_ids)
+
+def add_playlist_tracks_to_library(playlist_id, track_nums, client_config):
+    pandora = create_client(client_config)
+
+    playlist_info = pandora.get_playlist_info(playlist_id)
+    pandora.library_add_from_playlist(playlist_info, track_nums)
+
+def get_playlists_info(client_config):
+    def extract_playlist_info(pandora_playlists, playlist):
+        details = pandora_playlists["annotations"][playlist["pandoraId"]]
+        return {
+            "id": playlist["pandoraId"],
+            "name": playlist["name"],
+            "totalTracks": details["totalTracks"],
+            "duration": details["duration"]  # Seconds
+        }
+
+    pandora = create_client(client_config)
+
+    playlists = pandora.get_all_playlists()
+    thumbs_up_ids = [info["pandoraId"] for key, info in playlists["annotations"].items() if info.get("linkedType") in ("StationThumbs", "MyThumbsUp", "SharedListening")]
+    return [extract_playlist_info(playlists, playlist) for playlist in playlists["items"] if playlist["pandoraId"] not in thumbs_up_ids]
+
+def get_playlist_info(playlist_id, client_config):
+    pandora = create_client(client_config)
+
+    playlist_info = pandora.get_playlist_info(playlist_id)
+    return {
+        "name": playlist_info["name"],
+        "tracks": pandora.get_playlist_tracks(playlist_info),
+        "duration": playlist_info["duration"]  # Seconds
+    }
+

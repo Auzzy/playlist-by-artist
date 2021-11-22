@@ -66,3 +66,40 @@ search\_name is the name of the artist whose discography we're building.
 client\_config is a dict containing the info needed to create a client for this service, as is returned by auth\_to\_config.
 
 name\_format is the format of the resulting playlist name. You can use "{artist}" as a placeholder for the artist's name.
+
+
+#### update\_playlist(playlist\_id: str, item\_ids: list<str>, client\_config: dict<str: object>)
+
+Set the playlist order and contents to match the list of item\_ids (see *get\_playlist\_info* below for more details on item\_id). This means moving and deleting tracks; there is no mechanism for adding tracks.
+
+#### add\_playlist\_tracks\_to\_library(playlist\_id: str, item\_ids: list<str>, client\_config: dict<str: object>)
+
+Add the tracks indicated by item\_ids to the user's library (see *get\_playlist\_info* below for more details on item\_id).
+
+#### get\_playlists\_info(client\_config: dict<str: object>)
+
+Produce a list of dicts containing info on the user's playlists.
+
+Each dict should consist of:
+
+- id - the service specific ID of the playlist
+- name - the name of the playlist
+- totalTracks - the number of tracks on the playlist (as an int)
+- duration - the length of the playlist in seconds (as an int)
+
+#### get\_playlist\_info(playlist\_id: str, client\_config: dict<str: object>)
+
+Produce a dict of info about this playlist.
+
+The dict should contain:
+
+- name: the name of the playlist
+- duration: the lengt of the playlist in seconds (as an int).
+- tracks: a list of dicts containing info about each track in the playlist, in order. Each dict should contain:
+    - track\_id - the service specific ID of the track
+    - item\_id - the id of this track instance in this playlist. This is usually different from track_id, since a track may be repeated.
+    - name - the human-readable name of the track
+    - artist - the name of the artist. If there are multiple, they should be concatenated, preferably with a forward slash (/).
+    - album - the name of the album this instance comes from.
+    - duration - the length of this track in seconds (as an int)
+    - in\_library - True if this track is in the user's library; False otherwise.
