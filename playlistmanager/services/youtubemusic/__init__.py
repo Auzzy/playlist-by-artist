@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from ytmusicapi import YTMusic
 
 
+DISPLAY_NAME = "YouTube Music"
 NAMES = ("ytm", "youtubemusic", "youtube")
 
 
@@ -168,3 +169,74 @@ def create_similar_artists_playlist(albums_info_by_artist, search_name, client_c
         artist_ids = _get_ytm_artist(ytm, info["albums"], info["links"], similar_name)
         album_playlist_ids.extend(_get_yt_artist_discog(ytm, artist_ids, info["albums"]))
     return _create_ytm_playlist(ytm, search_name, album_playlist_ids, name_format)
+
+
+##### web app operations #####
+def update_playlist(playlist_id, item_ids, client_config):
+    ytm = create_client(client_config)
+
+    playlist_info = _get_playlist(playlist_id, ytm)
+    to_remove = []
+    for track in playlist_info["tracks"]:
+        if track["setVideoId"] not in item_ids:
+            to_remove.append(track)
+    if to_remove:
+        ytm.remove_playlist_items(playlist_id, to_remove)
+
+    # Since only one track can move at a time, we must iterate backwards over
+    # the list, inserting the Xth track before the (X-1)th track.
+    item_ids = list(reversed(item_ids))
+    for move in zip(item_ids[1:], item_ids[:-1]):  # This zip is an easy way to pair tracks.
+        ytm.edit_playlist(playlist_id, moveItem=move)
+
+def add_playlist_tracks_to_library(playlist_id, item_ids, client_config):
+    ytm = create_client(client_config)
+
+    playlist_info = _get_playlist(playlist_id, ytm)
+    to_add = []
+    for track in playlist_info["tracks"]:
+        if track["setVideoId"] in item_ids:
+            to_add.append(track["feedbackTokens"]["add"])
+    ytm.edit_song_library_status(to_add)
+
+def get_playlists_info(client_config):
+    def get_playlist_stats(playlist_id):
+        info = get_playlist_info(playlist_id, client_config)
+        return {
+            "id": playlist_id,
+            "name": info["name"],
+            "totalTracks": len(info["tracks"]),
+            "duration": info["duration"]  # Seconds
+        }
+
+    ytm = create_client(client_config)
+
+    return [get_playlist_stats(entry["playlistId"]) for entry in ytm.get_library_playlists()]
+
+def get_playlist_info(playlist_id, client_config):
+    ytm = create_client(client_config)
+
+    library = {lib_track["videoId"] for lib_track in ytm.get_library_songs(100000)}
+
+    def parse_track_duration(duration_str):
+        # Convert a human-readable duration into seconds (e.g. 3:04 -> 184).
+        parts = duration_str.split(":", 2)
+        return sum(int(val) * pow(60, index) for index, val in enumerate(reversed(parts)))
+
+    def track_details(track_info):
+        return {
+            "track_id": track_info["videoId"],
+            "item_id": track_info["setVideoId"],
+            "name": track_info["title"],
+            "artist": " / ".join(artist["name"] for artist in track_info["artists"]),
+            "album": track_info["album"]["name"],
+            "duration": parse_track_duration(track_info["duration"]),  # Seconds
+            "in_library": track_info["videoId"] in library
+        }
+
+    playlist_info = ytm.get_playlist(playlist_id)
+    return {
+        "name": playlist_info["title"],
+        "tracks": [track_details(track_info) for track_info in playlist_info["tracks"]],
+        "duration": sum(parse_track_duration(track_info["duration"]) for track_info in playlist_info["tracks"]) # Seconds
+    }

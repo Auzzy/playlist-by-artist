@@ -1,11 +1,14 @@
 import argparse
+import itertools
 
 from playlistmanager.musicbrainz import AlbumSorter, Filter
-from playlistmanager.services import supported_service_names
+from playlistmanager.services import supported_services_info
 
 def parse_args():
+    supported_service_names = list(itertools.chain.from_iterable([info["names"] for info in supported_services_info()]))
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("service", choices=supported_service_names())
+    parser.add_argument("service", choices=supported_service_names)
     parser.add_argument("artist", help="Create a playlist of this artist's releases.")
     parser.add_argument("--auth")
 
