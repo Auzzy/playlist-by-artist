@@ -1,10 +1,11 @@
 import argparse
 import collections
 
+from playlistmanager import __version__
 from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
 from playlistmanager.services import get_service
 
-USER_AGENT = "PlaylistManager/0.1"
+USER_AGENT = f"PlaylistManager/{__version__}"
 
 def _prompt_for_artist(matches, search_name):
     print(f"MusicBrainz found multiple artists matching \"{search_name}\". Please select one:")

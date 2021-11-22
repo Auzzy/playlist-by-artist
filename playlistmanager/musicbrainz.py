@@ -3,8 +3,9 @@ import requests
 import time
 from operator import itemgetter
 
+from playlistmanager import __version__
 
-DEFAULT_USER_AGENT = "PlaylistManager/0.1 (github.com/Auzzy/playlist-manager)"
+DEFAULT_USER_AGENT = f"PlaylistManager/{__version__} (github.com/Auzzy/playlist-manager)"
 
 
 class Filter:

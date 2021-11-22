@@ -1,8 +1,8 @@
-from playlistmanager import discography_playlist
+from playlistmanager import discography_playlist, __version__
 from playlistmanager.musicbrainz import AlbumSorter, Filter, MusicBrainz
 from playlistmanager.services import get_service
 
-USER_AGENT = "PlaylistManager/0.1"
+USER_AGENT = f"PlaylistManager/{__version__}"
 
 
 def _disambiguate_source_artist(similar_artist_choices):
