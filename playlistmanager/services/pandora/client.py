@@ -171,10 +171,20 @@ class Pandora:
     def get_albums(self, artist_info, album_names):
         return {album_name: self.get_album(artist_info, album_name) for album_name in album_names}
 
+    def get_playlist_track_annotations_all(self, playlist_info):
+        tracks = []
+        while True:
+            tracks_info = self.get_playlist_tracks_info(playlist_info, len(tracks))
+            annotations = tracks_info["annotations"]
+            tracks.extend(annotations[info["trackPandoraId"]] for info in tracks_info["tracks"])
+            if len(tracks) >= playlist_info["totalTracks"]:
+                break
+
+        return tracks
+
     def get_playlist_tracks_paginated(self, playlist_info, offset=0, limit=100):
         tracks = []
         tracks_info = self.get_playlist_tracks_info(playlist_info, offset, limit)
-        library_contains = self.library_contains_tracks(tracks_info["annotations"].values())
         for track in tracks_info["tracks"]:
             track_id = track["trackPandoraId"]
             detail = tracks_info["annotations"][track_id]
@@ -185,7 +195,6 @@ class Pandora:
                 "artist": detail["artistName"],
                 "album": detail["albumName"],
                 "duration": detail["duration"],
-                "in_library": library_contains.get(track_id, False)
             })
         return tracks
 

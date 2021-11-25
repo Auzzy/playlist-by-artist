@@ -102,4 +102,7 @@ The dict should contain:
     - artist - the name of the artist. If there are multiple, they should be concatenated, preferably with a forward slash (/).
     - album - the name of the album this instance comes from.
     - duration - the length of this track in seconds (as an int)
-    - in\_library - True if this track is in the user's library; False otherwise.
+
+#### get\_playlist\_tracks\_in\_library(playlist\_id: str, client\_config: dict<str: object>)
+
+Get a dict mapping the track\_id to a bool indicating if it's in the user's library.

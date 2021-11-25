@@ -213,16 +213,18 @@ def get_playlists_info(client_config):
 
     return [get_playlist_stats(entry["playlistId"]) for entry in ytm.get_library_playlists()]
 
+def _get_playlist(playlist_id, ytm):
+    playlist_info = ytm.get_playlist(playlist_id)
+    playlist_info["tracks"] = [track for track in playlist_info["tracks"] if track["isAvailable"]]
+    return playlist_info
+
+def _parse_track_duration(duration_str):
+    # Convert a human-readable duration into seconds (e.g. 3:04 -> 184).
+    parts = duration_str.split(":", 2)
+    return sum(int(val) * pow(60, index) for index, val in enumerate(reversed(parts)))
+
+
 def get_playlist_info(playlist_id, client_config):
-    ytm = create_client(client_config)
-
-    library = {lib_track["videoId"] for lib_track in ytm.get_library_songs(100000)}
-
-    def parse_track_duration(duration_str):
-        # Convert a human-readable duration into seconds (e.g. 3:04 -> 184).
-        parts = duration_str.split(":", 2)
-        return sum(int(val) * pow(60, index) for index, val in enumerate(reversed(parts)))
-
     def track_details(track_info):
         return {
             "track_id": track_info["videoId"],
@@ -230,13 +232,21 @@ def get_playlist_info(playlist_id, client_config):
             "name": track_info["title"],
             "artist": " / ".join(artist["name"] for artist in track_info["artists"]),
             "album": track_info["album"]["name"],
-            "duration": parse_track_duration(track_info["duration"]),  # Seconds
-            "in_library": track_info["videoId"] in library
+            "duration": _parse_track_duration(track_info["duration"]),  # Seconds
         }
 
-    playlist_info = ytm.get_playlist(playlist_id)
+    ytm = create_client(client_config)
+
+    playlist_info = _get_playlist(playlist_id, ytm)
     return {
         "name": playlist_info["title"],
         "tracks": [track_details(track_info) for track_info in playlist_info["tracks"]],
-        "duration": sum(parse_track_duration(track_info["duration"]) for track_info in playlist_info["tracks"]) # Seconds
+        "duration": sum(_parse_track_duration(track_info["duration"]) for track_info in playlist_info["tracks"]) # Seconds
     }
+
+def get_playlist_tracks_in_library(playlist_id, client_config):
+    ytm = create_client(client_config)
+
+    playlist_info = _get_playlist(playlist_id, ytm)
+    library_tracks = {lib_track["videoId"] for lib_track in ytm.get_library_songs(100000)}
+    return {track["videoId"]: track["videoId"] in library_tracks for track in playlist_info["tracks"]}
