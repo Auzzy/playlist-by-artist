@@ -160,3 +160,9 @@ def get_playlist_info(playlist_id, client_config):
         "duration": playlist_info["duration"]  # Seconds
     }
 
+def get_playlist_tracks_in_library(playlist_id, client_config):
+    pandora = create_client(client_config)
+
+    playlist_info = pandora.get_playlist_info(playlist_id)
+    track_annotations = pandora.get_playlist_track_annotations_all(playlist_info)
+    return pandora.library_contains_tracks(track_annotations)
