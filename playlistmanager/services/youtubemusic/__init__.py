@@ -176,32 +176,37 @@ def update_playlist(playlist_id, item_ids, client_config):
     ytm = create_client(client_config)
 
     playlist_info = _get_playlist(playlist_id, ytm)
-    to_remove = []
-    for track in playlist_info["tracks"]:
-        if track["setVideoId"] not in item_ids:
-            to_remove.append(track)
-    if to_remove:
-        ytm.remove_playlist_items(playlist_id, to_remove)
+    if playlist_info:
+        to_remove = []
+        for track in playlist_info["tracks"]:
+            if track["setVideoId"] not in item_ids:
+                to_remove.append(track)
+        if to_remove:
+            ytm.remove_playlist_items(playlist_id, to_remove)
 
-    # Since only one track can move at a time, we must iterate backwards over
-    # the list, inserting the Xth track before the (X-1)th track.
-    item_ids = list(reversed(item_ids))
-    for move in zip(item_ids[1:], item_ids[:-1]):  # This zip is an easy way to pair tracks.
-        ytm.edit_playlist(playlist_id, moveItem=move)
+        # Since only one track can move at a time, we must iterate backwards over
+        # the list, inserting the Xth track before the (X-1)th track.
+        item_ids = list(reversed(item_ids))
+        for move in zip(item_ids[1:], item_ids[:-1]):  # This zip is an easy way to pair tracks.
+            ytm.edit_playlist(playlist_id, moveItem=move)
 
 def add_playlist_tracks_to_library(playlist_id, item_ids, client_config):
     ytm = create_client(client_config)
 
     playlist_info = _get_playlist(playlist_id, ytm)
-    to_add = []
-    for track in playlist_info["tracks"]:
-        if track["setVideoId"] in item_ids:
-            to_add.append(track["feedbackTokens"]["add"])
-    ytm.edit_song_library_status(to_add)
+    if playlist_info:
+        to_add = []
+        for track in playlist_info["tracks"]:
+            if track["setVideoId"] in item_ids:
+                to_add.append(track["feedbackTokens"]["add"])
+        ytm.edit_song_library_status(to_add)
 
 def get_playlists_info(client_config):
     def get_playlist_stats(playlist_id):
         info = get_playlist_info(playlist_id, client_config)
+        if not info:
+            return None
+
         return {
             "id": playlist_id,
             "name": info["name"],
@@ -211,12 +216,26 @@ def get_playlists_info(client_config):
 
     ytm = create_client(client_config)
 
-    return [get_playlist_stats(entry["playlistId"]) for entry in ytm.get_library_playlists()]
+    playlists_info = [get_playlist_stats(entry["playlistId"]) for entry in ytm.get_library_playlists()]
 
+    # Any "None" entries are playlists which cannot be managed by this user.
+    # The playlist with the ID "LM" is your personal "Your Likes" playlist.
+    # It's not actually a playlist, at least not one you own, so you cannot
+    # manage it.
+    return [info for info in playlists_info if info and info["id"] != "LM"]
+
+# Retrieve the playlist, but updates the track list to only include tracks
+# which have a setVideoId and have isAvailable set to True. Insisting on them
+# having setVideoId is a proxy for the user owning the playlist, since I can't
+# find any way to determine your own identity to check against the author. And
+# isAvailable ensures the track is playable, and thus can be managed.
+# If this filter leaves the playlist empty, None is returned to indicate it
+# cannot be managed.
 def _get_playlist(playlist_id, ytm):
     playlist_info = ytm.get_playlist(playlist_id)
-    playlist_info["tracks"] = [track for track in playlist_info["tracks"] if track["isAvailable"]]
-    return playlist_info
+    original_track_count = len(playlist_info["tracks"])
+    playlist_info["tracks"] = [track for track in playlist_info["tracks"] if "setVideoId" in track and track.get("isAvailable")]
+    return playlist_info if playlist_info["tracks"] or original_track_count == 0 else None
 
 def _parse_track_duration(duration_str):
     # Convert a human-readable duration into seconds (e.g. 3:04 -> 184).
@@ -238,6 +257,9 @@ def get_playlist_info(playlist_id, client_config):
     ytm = create_client(client_config)
 
     playlist_info = _get_playlist(playlist_id, ytm)
+    if not playlist_info:
+        return None
+
     return {
         "name": playlist_info["title"],
         "tracks": [track_details(track_info) for track_info in playlist_info["tracks"]],
@@ -248,5 +270,8 @@ def get_playlist_tracks_in_library(playlist_id, client_config):
     ytm = create_client(client_config)
 
     playlist_info = _get_playlist(playlist_id, ytm)
+    if not playlist_info:
+        return None
+
     library_tracks = {lib_track["videoId"] for lib_track in ytm.get_library_songs(100000)}
     return {track["videoId"]: track["videoId"] in library_tracks for track in playlist_info["tracks"]}
