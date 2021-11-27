@@ -28,6 +28,19 @@ def _process_albums(albums_by_name):
             continue
 
         for album in albums:
+            # This is an experiment. Some albums are marked in the Pandora web
+            # app with "RADIO". Which means although it can be added to a
+            # playlist, it cannot be played on-demand. I haven't found anything
+            # which obviously triggers this in the API. However, in the rightsInfo
+            # object, tracks/albums which receive this tag have False for
+            # hasInteractive, hasNonInteractive, and hasOffline, whereas they're
+            # all True for the tracks which can be played. I don't know what the
+            # Interactive ones mean, so I use hasOffline, as I'd imagine any
+            # track which you can listen to on-demand can be listened to offline.
+            if not album["rightsInfo"]["hasOffline"]:
+                print(f"\"{name}\" is apparently only available for radio play. Skipping.")
+                continue
+
             if album["pandoraId"] in album_ids:
                 print(f"Duplicate album ID. Probably couldn't find \"{name}\" on Pandora, so search turned up another album by {album['artistName']}. Skipping.")
                 continue
