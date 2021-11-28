@@ -5,12 +5,17 @@ def hook_parse_playlist():
 
     from ytmusicapi.parsers.browsing import parse_playlist as _orig_parse_playlist
     from ytmusicapi.parsers.utils import nav
-    from ytmusicapi.parsers import SUBTITLE2
+    from ytmusicapi.parsers import SUBTITLE, SUBTITLE2, NAVIGATION_BROWSE_ID
 
     def parse_playlist(data):
         playlist = _orig_parse_playlist(data)
-        if len(data['subtitle']['runs']) == 3 and re.search(r'\d+ ', nav(data, SUBTITLE2)):
-            playlist['count'] = nav(data, SUBTITLE2).split(' ')[0]
+        if len(data['subtitle']['runs']) == 3:
+            playlist["author"] = {
+                "name": nav(data, SUBTITLE).strip(),
+                "id": nav(data, SUBTITLE[:-1] + NAVIGATION_BROWSE_ID)
+            }
+            if re.search(r'\d+ ', nav(data, SUBTITLE2)):
+                playlist['count'] = nav(data, SUBTITLE2).split(' ')[0]
         return playlist
 
 
