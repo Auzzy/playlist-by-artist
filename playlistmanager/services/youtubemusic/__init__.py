@@ -239,6 +239,8 @@ def _parse_track_duration(duration_str):
 
 def get_playlist_info(playlist_id, client_config):
     def track_details(track_info):
+        if "inLibrary" not in track_info:
+            print(track_info)
         return {
             "track_id": track_info["videoId"],
             "item_id": track_info["setVideoId"],
@@ -246,6 +248,7 @@ def get_playlist_info(playlist_id, client_config):
             "artist": " / ".join(artist["name"] for artist in track_info["artists"]),
             "album": track_info["album"]["name"],
             "duration": _parse_track_duration(track_info["duration"]),  # Seconds
+            "in_library": track_info["inLibrary"]
         }
 
     ytm = create_client(client_config)

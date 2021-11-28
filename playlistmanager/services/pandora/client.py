@@ -182,26 +182,31 @@ class Pandora:
 
         return tracks
 
-    def get_playlist_tracks_paginated(self, playlist_info, offset=0, limit=100):
+    def get_playlist_tracks_paginated(self, playlist_info, offset=0, limit=100, *, library={}):
         tracks = []
         tracks_info = self.get_playlist_tracks_info(playlist_info, offset, limit)
         for track in tracks_info["tracks"]:
             track_id = track["trackPandoraId"]
             detail = tracks_info["annotations"][track_id]
-            tracks.append({
+            track_info = {
                 "track_id": track_id,
                 "item_id": track["itemId"],
                 "name": detail["name"],
                 "artist": detail["artistName"],
                 "album": detail["albumName"],
                 "duration": detail["duration"],
-            })
+            }
+            if library:
+                track_info["in_library"] = track_id in library or detail["albumId"] in library
+
+            tracks.append(track_info)
         return tracks
 
-    def get_playlist_tracks(self, playlist_info):
+    def get_playlist_tracks(self, playlist_info, *, include_library=False):
         tracks = []
+        library = self.library_get_all() if include_library else {}
         while True:
-            tracks.extend(self.get_playlist_tracks_paginated(playlist_info, len(tracks)))
+            tracks.extend(self.get_playlist_tracks_paginated(playlist_info, len(tracks), library=library))
             if len(tracks) >= playlist_info["totalTracks"]:
                 break
 

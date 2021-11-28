@@ -156,7 +156,7 @@ def get_playlist_info(playlist_id, client_config):
     playlist_info = pandora.get_playlist_info(playlist_id)
     return {
         "name": playlist_info["name"],
-        "tracks": pandora.get_playlist_tracks(playlist_info),
+        "tracks": pandora.get_playlist_tracks(playlist_info, include_library=True),
         "duration": playlist_info["duration"]  # Seconds
     }
 
