@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from ytmusicapi import YTMusic
 
+from ._hooks import *
 
 DISPLAY_NAME = "YouTube Music"
 NAMES = ("ytm", "youtubemusic", "youtube")
