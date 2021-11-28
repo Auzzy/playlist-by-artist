@@ -203,27 +203,20 @@ def add_playlist_tracks_to_library(playlist_id, item_ids, client_config):
         ytm.edit_song_library_status(to_add)
 
 def get_playlists_info(client_config):
-    def get_playlist_stats(playlist_id):
-        info = get_playlist_info(playlist_id, client_config)
-        if not info:
-            return None
-
+    def get_playlist_stats(info):
         return {
-            "id": playlist_id,
-            "name": info["name"],
-            "totalTracks": len(info["tracks"]),
-            "duration": info["duration"]  # Seconds
+            "id": info["playlistId"],
+            "name": info["title"],
+            "totalTracks": info["count"]
         }
 
     ytm = create_client(client_config)
 
-    playlists_info = [get_playlist_stats(entry["playlistId"]) for entry in ytm.get_library_playlists()]
-
-    # Any "None" entries are playlists which cannot be managed by this user.
     # The playlist with the ID "LM" is your personal "Your Likes" playlist.
     # It's not actually a playlist, at least not one you own, so you cannot
     # manage it.
-    return [info for info in playlists_info if info and info["id"] != "LM"]
+    # TODO: Figure out how to detect playlists owned by someone else.
+    return [get_playlist_stats(info) for info in ytm.get_library_playlists() if info["playlistId"] != "LM"]
 
 # Retrieve the playlist, but updates the track list to only include tracks
 # which have a setVideoId and have isAvailable set to True. Insisting on them

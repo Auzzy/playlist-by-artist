@@ -85,7 +85,7 @@ Each dict should consist of:
 - id - the service specific ID of the playlist
 - name - the name of the playlist
 - totalTracks - the number of tracks on the playlist (as an int)
-- duration - the length of the playlist in seconds (as an int)
+- duration [optional] - the length of the playlist in seconds (as an int)
 
 #### get\_playlist\_info(playlist\_id: str, client\_config: dict<str: object>)
 
