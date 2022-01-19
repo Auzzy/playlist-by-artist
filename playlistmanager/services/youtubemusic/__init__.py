@@ -251,7 +251,8 @@ def get_playlist_info(playlist_id, client_config):
             "item_id": track_info["setVideoId"],
             "name": track_info["title"],
             "artist": " / ".join(artist["name"] for artist in track_info["artists"]),
-            "album": track_info["album"]["name"],
+            # Not every track will have an album. This is mostly true for YT videos.
+            "album": (track_info.get("album") or {}).get("name"),
             "duration": _parse_track_duration(track_info["duration"]),  # Seconds
         }
 
