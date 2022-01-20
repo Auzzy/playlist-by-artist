@@ -233,7 +233,13 @@ def get_playlists_info(client_config):
 # If this filter leaves the playlist empty, None is returned to indicate it
 # cannot be managed.
 def _get_playlist(playlist_id, ytm):
-    playlist_info = ytm.get_playlist(playlist_id)
+    # The YouTube Music API doesn't give us much control over playlist
+    # retrieval. While it does have continuation IDs, it only lets us get them
+    # in fixed soize chunks. So rather than guess the playlist length, then
+    # have to issue the same set of requests plus some more, we just issue a
+    # single request to get that info before requesting it all.
+    track_count = ytm.get_playlist(playlist_id, limit=0)["trackCount"]
+    playlist_info = ytm.get_playlist(playlist_id, limit=track_count)
     original_track_count = len(playlist_info["tracks"])
     playlist_info["tracks"] = [track for track in playlist_info["tracks"] if "setVideoId" in track and track.get("isAvailable")]
     return playlist_info if playlist_info["tracks"] or original_track_count == 0 else None
