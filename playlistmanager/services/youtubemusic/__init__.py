@@ -222,13 +222,18 @@ def get_playlists_info(client_config):
 
     ytm = create_client(client_config)
 
-    playlists_info = [get_playlist_stats(entry["playlistId"]) for entry in ytm.get_library_playlists()]
+    playlists_info = []
+    for entry in ytm.get_library_playlists():
+        # "LM" is your personal "Your Likes" playlist. It's not actually a
+        # playlist, or at least not one you own, so you cannot manage it.
+        # And it takes forever to load since it's huge.
+        if entry["playlistId"] != "LM":
+            info = get_playlist_stats(entry["playlistId"])
+            if info:
+                playlists_info.append(info)
 
-    # Any "None" entries are playlists which cannot be managed by this user.
-    # The playlist with the ID "LM" is your personal "Your Likes" playlist.
-    # It's not actually a playlist, at least not one you own, so you cannot
-    # manage it.
-    return [info for info in playlists_info if info and info["id"] != "LM"]
+    return playlists_info
+
 
 # Retrieve the playlist, but updates the track list to only include tracks
 # which have a setVideoId and have isAvailable set to True. Insisting on them
