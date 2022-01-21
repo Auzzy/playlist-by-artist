@@ -178,6 +178,8 @@ def update_playlist(playlist_id, item_ids, client_config):
 
     playlist_info = _get_playlist(playlist_id, ytm)
     if playlist_info:
+        track_ids = [track["setVideoId"] for track in playlist_info["tracks"]]
+
         to_remove = []
         for track in playlist_info["tracks"]:
             if track["setVideoId"] not in item_ids:
@@ -185,11 +187,14 @@ def update_playlist(playlist_id, item_ids, client_config):
         if to_remove:
             ytm.remove_playlist_items(playlist_id, to_remove)
 
-        # Since only one track can move at a time, we must iterate backwards over
-        # the list, inserting the Xth track before the (X-1)th track.
+        # Since only one track can move at a time, we must iterate backwards
+        # over the list, inserting the Xth track before the (X-1)th track. And
+        # since the ordering is relative, we only make edits when the requested
+        # playlist differs from the existing one.
         item_ids = list(reversed(item_ids))
         for move in zip(item_ids[1:], item_ids[:-1]):  # This zip is an easy way to pair tracks.
-            ytm.edit_playlist(playlist_id, moveItem=move)
+            if track_ids.index(move[0]) > track_ids.index(move[1]):
+                ytm.edit_playlist(playlist_id, moveItem=move)
 
 def add_playlist_tracks_to_library(playlist_id, item_ids, client_config):
     ytm = create_client(client_config)
