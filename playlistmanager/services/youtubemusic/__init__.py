@@ -193,8 +193,11 @@ def update_playlist(playlist_id, item_ids, client_config):
         # playlist differs from the existing one.
         item_ids = list(reversed(item_ids))
         for move in zip(item_ids[1:], item_ids[:-1]):  # This zip is an easy way to pair tracks.
-            if track_ids.index(move[0]) > track_ids.index(move[1]):
+            move_indicies = (track_ids.index(move[0]), track_ids.index(move[1]))
+            if move_indicies[0] > move_indicies[1]:
                 ytm.edit_playlist(playlist_id, moveItem=move)
+                track_ids.insert(move_indicies[1], track_ids.pop(move_indicies[0]))
+                
 
 def add_playlist_tracks_to_library(playlist_id, item_ids, client_config):
     ytm = create_client(client_config)
