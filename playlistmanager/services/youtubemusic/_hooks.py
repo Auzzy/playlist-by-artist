@@ -4,8 +4,7 @@ def hook_parse_playlist():
     import re
 
     from ytmusicapi.parsers.browsing import parse_playlist as _orig_parse_playlist
-    from ytmusicapi.parsers.utils import nav
-    from ytmusicapi.parsers import SUBTITLE, SUBTITLE2, NAVIGATION_BROWSE_ID
+    from ytmusicapi.navigation import nav, SUBTITLE, SUBTITLE2, NAVIGATION_BROWSE_ID
 
     def parse_playlist(data):
         playlist = _orig_parse_playlist(data)
