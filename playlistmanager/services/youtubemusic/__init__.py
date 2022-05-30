@@ -24,6 +24,10 @@ _HEADERS = {
     "x-origin": "https://music.youtube.com"
 }
 
+# Limits are required for the library functions, so we pass in a limit that's
+# functionally infinite.
+_ALL = 100000000
+
 def auth_to_config(auth):
     return {"cookie": auth} if auth else {}
 
@@ -222,7 +226,7 @@ def get_playlists_info(client_config):
     ytm = create_client(client_config)
 
     playlists_info = []
-    for entry in ytm.get_library_playlists():
+    for entry in ytm.get_library_playlists(_ALL):
         # "LM" is your personal "Your Likes" playlist. It's not actually a
         # playlist, or at least not one you own, so you cannot manage it.
         # And it takes forever to load since it's huge.
@@ -290,5 +294,5 @@ def get_playlist_tracks_in_library(playlist_id, client_config):
     if not playlist_info:
         return None
 
-    library_tracks = {lib_track["videoId"] for lib_track in ytm.get_library_songs(100000)}
+    library_tracks = {lib_track["videoId"] for lib_track in ytm.get_library_songs(_ALL)}
     return {track["videoId"]: track["videoId"] in library_tracks for track in playlist_info["tracks"]}
