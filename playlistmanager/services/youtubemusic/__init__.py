@@ -211,16 +211,12 @@ def add_playlist_tracks_to_library(playlist_id, item_ids, client_config):
         ytm.edit_song_library_status(to_add)
 
 def get_playlists_info(client_config):
-    def get_playlist_stats(playlist_id):
-        info = get_playlist_info(playlist_id, client_config)
-        if not info:
-            return None
-
+    def get_playlist_stats(entry):
         return {
-            "id": playlist_id,
-            "name": info["name"],
-            "totalTracks": len(info["tracks"]),
-            "duration": info["duration"]  # Seconds
+            "id": entry["playlistId"],
+            "name": entry["title"],
+            "totalTracks": entry.get("count"),
+            "duration": None
         }
 
     ytm = create_client(client_config)
@@ -231,7 +227,7 @@ def get_playlists_info(client_config):
         # playlist, or at least not one you own, so you cannot manage it.
         # And it takes forever to load since it's huge.
         if entry["playlistId"] != "LM":
-            info = get_playlist_stats(entry["playlistId"])
+            info = get_playlist_stats(entry)
             if info:
                 playlists_info.append(info)
 
