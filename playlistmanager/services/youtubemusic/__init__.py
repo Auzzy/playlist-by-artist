@@ -132,16 +132,25 @@ def _yt_channel_id_from_url(yt_url):
     else:
         return _extract_channel_id(yt_url)
 
+def _get_artist_safe(ytm, channel_id):
+    try:
+        return ytm.get_artist(channel_id)
+    except Exception:
+        # In most cases, ytmusicapi returns a generic Exception, so we can't
+        # reliably catch a more fine-grained type or inspect the exception.
+        return None
+
 def _get_ytm_artist(ytm, albums_info, artist_links, search_name):
     yt_links = artist_links.get("youtube", [])
     if yt_links:
-        return {_yt_channel_id_from_url(yt_link) for yt_link in yt_links}
-    else:
-        # If there's no YouTube link, search for the artist.
+        channel_ids = {channel_id for yt_link in yt_links if _get_artist_safe(ytm, channel_id := _yt_channel_id_from_url(yt_link))}
+        if channel_ids:
+            return channel_ids
 
-        # First version is to just grab the artist YouTube says is most likely who they're referring to.
-        artist_choices = search_artists(search_name, client=ytm)
-        return {artist_choices[0]["id"]}
+    # If there's no YouTube link, search for the artist.
+    # For now, just grab the artist YouTube says is most likely who they're referring to.
+    artist_choices = search_artists(search_name, client=ytm)
+    return {artist_choices[0]["id"]}
 
 def get_similar_artists(artist_id, client_config):
     similar_artists = create_client(client_config).get_artist(artist_id).get("related", {}).get("results", [])
@@ -154,7 +163,11 @@ def search_artists(search_name, client_config={}, *, client=None):
     choices = []
     for result in search_results:
         artist_id = result["browseId"]
-        related_results = ytm.get_artist(artist_id).get("related", {}).get("results", [])
+        artist = _get_artist_safe(ytm, artist_id)
+        if not artist:
+            continue
+
+        related_results = artist.get("related", {}).get("results", [])
         similar_info = [{"id": artist["browseId"], "name": artist["title"]} for artist in related_results]
         choices.append({"id": artist_id, "name": result["artist"], "similar": similar_info})
     return choices
